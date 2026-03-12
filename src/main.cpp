@@ -1,3 +1,4 @@
+#include "Arduino.h"
 #include "gps/GpsReader.h"
 #include "application/Application.h"
 #include "storage/Storage.h"
@@ -10,8 +11,22 @@ ClientSync client;
 
 void setup()
 {
+    Serial.begin(115200);
+
+    while (!Serial)
+    {
+        delay(10);
+    }
+
+    Serial.println();
+    Serial.println("AirTrack Ride firmware starting...");
+
     gps.begin();
-    storage.begin();
+
+    if (!storage.begin())
+    {
+        Serial.println("Storage initialization failed");
+    }
 }
 
 void loop()

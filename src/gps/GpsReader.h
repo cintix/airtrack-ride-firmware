@@ -1,6 +1,8 @@
 #ifndef GPS_READER_H
 #define GPS_READER_H
 
+#include <stdint.h>
+
 #include "models/GpsRecord.h"
 #include "models/UbxPacket.h"
 #include "UbxReader.h"
@@ -25,7 +27,9 @@ private:
 
     void handlePacket(const UbxPacket &packet);
 
-    void decodeNavPvt(const UbxPacket &packet);
+    void decodeNavigationPositionVelocityTime(const UbxPacket &packet);
+
+    void configurePlatformModel(uint8_t platformModel);
 };
 
 #endif
