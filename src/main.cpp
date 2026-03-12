@@ -35,4 +35,24 @@ void loop()
     application.update();
     storage.update();
     client.update();
+
+    if (gps.hasRecord())
+    {
+        GpsRecord record = gps.getRecord();
+
+        Serial.print("LAT: ");
+        Serial.print(record.latitude, 7);
+
+        Serial.print("  LON: ");
+        Serial.print(record.longitude, 7);
+
+        Serial.print("  SAT: ");
+        Serial.print(record.satelliteCount);
+
+        Serial.print("  SPEED(km/h): ");
+
+        float speedKmh = record.groundSpeedMetersPerSecond * 3.6f;
+
+        Serial.println(speedKmh, 2);
+    }
 }
