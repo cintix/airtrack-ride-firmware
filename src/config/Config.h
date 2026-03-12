@@ -1,5 +1,10 @@
 #ifndef CONFIG_H
 #define CONFIG_H
+/*
+    GPS DEBUG CONFIGURATION
+*/
+
+#define DEBUG_GPS_PRINT_INTERVAL_MS 5000
 
 /*
     GPS UART configuration

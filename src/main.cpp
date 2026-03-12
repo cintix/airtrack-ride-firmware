@@ -3,6 +3,7 @@
 #include "application/Application.h"
 #include "storage/Storage.h"
 #include "client/ClientSync.h"
+#include "config/Config.h"
 
 GpsReader gps;
 Application application;
@@ -36,23 +37,21 @@ void loop()
     storage.update();
     client.update();
 
+    static uint32_t lastPrint = 0;
+
     if (gps.hasRecord())
     {
         GpsRecord record = gps.getRecord();
 
-        Serial.print("LAT: ");
-        Serial.print(record.latitude, 7);
+        if (millis() - lastPrint > DEBUG_GPS_PRINT_INTERVAL_MS)
+        {
+            lastPrint = millis();
 
-        Serial.print("  LON: ");
-        Serial.print(record.longitude, 7);
+            float speedKmh = record.groundSpeedMetersPerSecond * 3.6f;
 
-        Serial.print("  SAT: ");
-        Serial.print(record.satelliteCount);
-
-        Serial.print("  SPEED(km/h): ");
-
-        float speedKmh = record.groundSpeedMetersPerSecond * 3.6f;
-
-        Serial.println(speedKmh, 2);
+            Serial.print("Speed: ");
+            Serial.print(speedKmh, 2);
+            Serial.println(" km/h");
+        }
     }
 }
