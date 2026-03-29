@@ -5,6 +5,7 @@
 */
 
 #define DEBUG_GPS_PRINT_INTERVAL_MS 5000
+#define DEBUG_GPS_LED_PIN 7
 
 /*
     GPS UART configuration

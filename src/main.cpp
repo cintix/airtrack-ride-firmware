@@ -49,7 +49,19 @@ void loop()
 
             float speedKmh = record.groundSpeedMetersPerSecond * 3.6f;
 
-            Serial.print("Speed: ");
+            Serial.print("FIX: ");
+            Serial.print(record.valid ? "YES" : "NO");
+
+            Serial.print("  SAT: ");
+            Serial.print(record.satelliteCount);
+
+            Serial.print("  LAT: ");
+            Serial.print(record.latitude, 7);
+
+            Serial.print("  LON: ");
+            Serial.print(record.longitude, 7);
+
+            Serial.print("  SPEED: ");
             Serial.print(speedKmh, 2);
             Serial.println(" km/h");
         }
