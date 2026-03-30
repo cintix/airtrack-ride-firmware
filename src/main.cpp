@@ -14,10 +14,7 @@ void setup()
 {
     Serial.begin(115200);
 
-    while (!Serial)
-    {
-        delay(10);
-    }
+    delay(200); // USB settle
 
     Serial.println();
     Serial.println("AirTrack Ride firmware starting...");
@@ -28,6 +25,8 @@ void setup()
     {
         Serial.println("Storage initialization failed");
     }
+
+    Serial.println("AirTrack Ride firmware is ready...");
 }
 
 void loop()

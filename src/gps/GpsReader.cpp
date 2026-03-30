@@ -41,7 +41,7 @@ GpsRecord GpsReader::getRecord()
 
 void GpsReader::handlePacket(const UbxPacket &packet)
 {
-    if (packet.messageClass == 0x01 && packet.messageId == 0x07)
+    if (packet.messageClass == 0x01 && packet.messageId == 0x02)
     {
         decodeNavigationPositionVelocityTime(packet);
     }
@@ -51,38 +51,25 @@ void GpsReader::decodeNavigationPositionVelocityTime(const UbxPacket &packet)
 {
     const uint8_t *payload = packet.payload;
 
-    int32_t longitudeRaw;
-    int32_t latitudeRaw;
-    int32_t altitudeMillimeters;
-    int32_t groundSpeedMillimetersPerSecond;
-    int32_t headingScaled;
+    int32_t lon;
+    int32_t lat;
+    int32_t height;
 
-    memcpy(&longitudeRaw, payload + 24, sizeof(int32_t));
-    memcpy(&latitudeRaw, payload + 28, sizeof(int32_t));
+    memcpy(&lon, payload + 4, sizeof(int32_t));
+    memcpy(&lat, payload + 8, sizeof(int32_t));
+    memcpy(&height, payload + 12, sizeof(int32_t));
 
-    memcpy(&altitudeMillimeters, payload + 32, sizeof(int32_t));
+    currentRecord.longitude = lon / 10000000.0;
+    currentRecord.latitude = lat / 10000000.0;
+    currentRecord.altitudeMeters = height / 1000.0f;
 
-    memcpy(&groundSpeedMillimetersPerSecond, payload + 60, sizeof(int32_t));
+    // ⚠️ Ikke tilgængeligt i POSLLH → fallback
+    currentRecord.groundSpeedMetersPerSecond = 0.0f;
+    currentRecord.headingDegrees = 0.0f;
+    currentRecord.satelliteCount = 0;
 
-    memcpy(&headingScaled, payload + 64, sizeof(int32_t));
-
-    uint8_t fixType = payload[20];
-    uint8_t satelliteCount = payload[23];
-
-    currentRecord.valid = (fixType >= 3);
-
-    currentRecord.latitude = latitudeRaw / 10000000.0;
-    currentRecord.longitude = longitudeRaw / 10000000.0;
-
-    currentRecord.altitudeMeters = altitudeMillimeters / 1000.0f;
-
-    currentRecord.groundSpeedMetersPerSecond =
-        groundSpeedMillimetersPerSecond / 1000.0f;
-
-    currentRecord.headingDegrees =
-        headingScaled / 100000.0f;
-
-    currentRecord.satelliteCount = satelliteCount;
+    // POSLLH har ikke fixType → vi antager valid hvis vi får data
+    currentRecord.valid = true;
 
     currentRecord.timestampMilliseconds = millis();
 
