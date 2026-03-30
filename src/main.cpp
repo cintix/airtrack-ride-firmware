@@ -3,12 +3,19 @@
 #include "application/Application.h"
 #include "storage/Storage.h"
 #include "client/ClientSync.h"
+#include "screen/Screen.h"
+#include "screen/OledDisplay.h"
+#include "screen/models/DisplayRecord.h"
 #include "config/Config.h"
 
 GpsReader gps;
 Application application;
 Storage storage;
 ClientSync client;
+
+OledDisplay oled;
+Screen screen(oled);
+
 
 void setup()
 {
@@ -25,6 +32,8 @@ void setup()
     {
         Serial.println("Storage initialization failed");
     }
+
+    oled.begin();
 
     Serial.println("AirTrack Ride firmware is ready...");
 }
@@ -48,6 +57,9 @@ void loop()
 
             float speedKmh = record.groundSpeedMetersPerSecond * 3.6f;
 
+            DisplayRecord displayRecord;
+            displayRecord.SpeedKm = speedKmh;
+
             Serial.print("FIX: ");
             Serial.print(record.valid ? "YES" : "NO");
 
@@ -63,6 +75,8 @@ void loop()
             Serial.print("  SPEED: ");
             Serial.print(speedKmh, 2);
             Serial.println(" km/h");
+
+            screen.update(displayRecord);
         }
     }
 }

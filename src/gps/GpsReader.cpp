@@ -90,6 +90,7 @@ void GpsReader::decodeVelocity(const UbxPacket &packet)
     currentRecord.groundSpeedMetersPerSecond = groundSpeed / 100.0f;
     currentRecord.headingDegrees = heading / 100000.0f;
 
+
     currentRecord.timestampMilliseconds = millis();
 
     recordAvailable = true;
