@@ -2,20 +2,24 @@
 #define UBX_READER_H
 
 #include <stdint.h>
+#include <Arduino.h>
 #include "models/UbxPacket.h"
 
 class UbxReader
 {
 public:
     void begin();
-
     void update();
 
-    bool hasPacket();
-
+    bool hasPacket() const;
     UbxPacket getPacket();
 
+    void enableNavigationMessage(uint8_t messageId);
+    void setUpdateRate(uint16_t milliseconds);
+
 private:
+    HardwareSerial* serial = nullptr;
+
     enum class ParserState
     {
         WaitingForSyncByte1,
@@ -47,10 +51,11 @@ private:
     UbxPacket packet;
 
     void updateChecksum(uint8_t incomingByte);
-
     void processIncomingByte(uint8_t incomingByte);
-
     void finalizePacket();
+
+    void sendUbxMessage(uint8_t messageClass, uint8_t messageId, const uint8_t* payload, uint16_t length);
+    void disableNmeaOutput();
 };
 
 #endif

@@ -1,7 +1,5 @@
 #include "GpsReader.h"
-
 #include <Arduino.h>
-
 #include "../config/Config.h"
 
 void GpsReader::begin()
@@ -22,7 +20,6 @@ void GpsReader::update()
     if (ubxReader.hasPacket())
     {
         UbxPacket packet = ubxReader.getPacket();
-
         handlePacket(packet);
     }
 }
@@ -35,19 +32,31 @@ bool GpsReader::hasRecord()
 GpsRecord GpsReader::getRecord()
 {
     recordAvailable = false;
-
     return currentRecord;
 }
 
 void GpsReader::handlePacket(const UbxPacket &packet)
 {
-    if (packet.messageClass == 0x01 && packet.messageId == 0x02)
+    
+    if (packet.messageClass != GpsProtocol::MessageClass::Navigation)
+        return;
+
+    if (packet.messageId == GpsProtocol::NavigationMessageId::PositionLatitudeLongitudeHeight)
     {
-        decodeNavigationPositionVelocityTime(packet);
+        decodePosition(packet);
     }
+    else if (packet.messageId == GpsProtocol::NavigationMessageId::VelocityNorthEastDown)
+    {
+        decodeVelocity(packet);
+    } 
+    else if (packet.messageId == GpsProtocol::NavigationMessageId::NavigationSolution)
+    {
+        decodeNavigation(packet);
+    }   
+
 }
 
-void GpsReader::decodeNavigationPositionVelocityTime(const UbxPacket &packet)
+void GpsReader::decodePosition(const UbxPacket &packet)
 {
     const uint8_t *payload = packet.payload;
 
@@ -63,16 +72,40 @@ void GpsReader::decodeNavigationPositionVelocityTime(const UbxPacket &packet)
     currentRecord.latitude = lat / 10000000.0;
     currentRecord.altitudeMeters = height / 1000.0f;
 
-    // ⚠️ Ikke tilgængeligt i POSLLH → fallback
-    currentRecord.groundSpeedMetersPerSecond = 0.0f;
-    currentRecord.headingDegrees = 0.0f;
-    currentRecord.satelliteCount = 0;
+    currentRecord.timestampMilliseconds = millis();
+}
 
-    // POSLLH har ikke fixType → vi antager valid hvis vi får data
-    currentRecord.valid = true;
+void GpsReader::decodeVelocity(const UbxPacket &packet)
+{
+    const uint8_t *payload = packet.payload;
+
+    int32_t speed3D;
+    int32_t groundSpeed;
+    int32_t heading;
+
+    memcpy(&speed3D, payload + 16, sizeof(int32_t));
+    memcpy(&groundSpeed, payload + 20, sizeof(int32_t));
+    memcpy(&heading, payload + 24, sizeof(int32_t));
+
+    currentRecord.groundSpeedMetersPerSecond = groundSpeed / 100.0f;
+    currentRecord.headingDegrees = heading / 100000.0f;
 
     currentRecord.timestampMilliseconds = millis();
 
+    recordAvailable = true;
+}
+
+void GpsReader::decodeNavigation(const UbxPacket &packet)
+{
+    const uint8_t *payload = packet.payload;
+
+    uint8_t fixType = payload[10];
+    uint8_t satellites = payload[47];
+
+    currentRecord.valid = (fixType >= 3);
+    currentRecord.satelliteCount = satellites;
+
+    currentRecord.timestampMilliseconds = millis();
     recordAvailable = true;
 }
 
@@ -80,46 +113,27 @@ void GpsReader::configurePlatformModel(uint8_t platformModel)
 {
     uint8_t ubxMessage[] =
         {
-            0xB5, 0x62, // UBX header
-
-            0x06, 0x24, // CFG-NAV5
-
-            0x24, 0x00, // payload length (36 bytes)
-
-            0x01, 0x00, // mask: apply dynamic model
-
-            platformModel, // dynamic platform model
-
-            0x03, // fix mode (auto)
-
-            0x00, 0x00, 0x00, 0x00, // fixed altitude
-            0x10, 0x27, 0x00, 0x00, // fixed altitude variance
-
-            0x05, // minimum elevation
-
-            0x00, // reserved
-
-            0xFA, 0x00, // position DOP mask
-
-            0xFA, 0x00, // time DOP mask
-
-            0x64, 0x00, // position accuracy mask
-
-            0x2C, 0x01, // time accuracy mask
-
-            0x00, // static hold threshold
-
-            0x3C, // dynamic hold threshold
-
-            0x00, // reserved
-
-            0x00, 0x00, // reserved
-
-            0x00, 0x00, // reserved
-
-            0x00, 0x00, // reserved
-
-            0x00, 0x00 // reserved
+            0xB5, 0x62,
+            0x06, 0x24,
+            0x24, 0x00,
+            0x01, 0x00,
+            platformModel,
+            0x03,
+            0x00, 0x00, 0x00, 0x00,
+            0x10, 0x27, 0x00, 0x00,
+            0x05,
+            0x00,
+            0xFA, 0x00,
+            0xFA, 0x00,
+            0x64, 0x00,
+            0x2C, 0x01,
+            0x00,
+            0x3C,
+            0x00,
+            0x00, 0x00,
+            0x00, 0x00,
+            0x00, 0x00,
+            0x00, 0x00
         };
 
     uint8_t checksumByteA = 0;

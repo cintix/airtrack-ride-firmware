@@ -11,8 +11,8 @@
     GPS UART configuration
 */
 
-#define GPS_UART_RX_PIN 20
-#define GPS_UART_TX_PIN 21
+#define GPS_UART_RX_PIN 7
+#define GPS_UART_TX_PIN 6
 
 #define GPS_BAUD_RATE 9600
 
