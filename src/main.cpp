@@ -9,6 +9,105 @@
 #include "input/Input.h"
 #include "config/Config.h"
 
+namespace
+{
+    struct DateTimeParts
+    {
+        uint16_t year;
+        uint8_t month;
+        uint8_t day;
+        uint8_t hour;
+        uint8_t minute;
+        uint8_t second;
+    };
+
+    bool isLeapYear(uint16_t year)
+    {
+        if ((year % 400) == 0)
+        {
+            return true;
+        }
+
+        if ((year % 100) == 0)
+        {
+            return false;
+        }
+
+        return (year % 4) == 0;
+    }
+
+    DateTimeParts convertEpochToDateTime(uint32_t epochSeconds)
+    {
+        static const uint8_t daysInMonth[] = {
+            31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+        };
+
+        DateTimeParts result = {};
+
+        uint32_t days = epochSeconds / 86400UL;
+        uint32_t secondsInDay = epochSeconds % 86400UL;
+
+        result.hour = secondsInDay / 3600UL;
+        result.minute = (secondsInDay % 3600UL) / 60UL;
+        result.second = secondsInDay % 60UL;
+
+        uint16_t year = 1970;
+        while (true)
+        {
+            uint16_t daysInYear = isLeapYear(year) ? 366 : 365;
+            if (days < daysInYear)
+            {
+                break;
+            }
+
+            days -= daysInYear;
+            year++;
+        }
+
+        result.year = year;
+
+        uint8_t month = 1;
+        while (month <= 12)
+        {
+            uint8_t monthDays = daysInMonth[month - 1];
+            if (month == 2 && isLeapYear(year))
+            {
+                monthDays++;
+            }
+
+            if (days < monthDays)
+            {
+                break;
+            }
+
+            days -= monthDays;
+            month++;
+        }
+
+        result.month = month;
+        result.day = static_cast<uint8_t>(days + 1);
+        return result;
+    }
+
+    uint32_t applyTimezoneOffset(uint32_t utcEpochSeconds, int16_t timezoneOffsetMinutes)
+    {
+        int64_t localEpoch = static_cast<int64_t>(utcEpochSeconds) + (static_cast<int64_t>(timezoneOffsetMinutes) * 60LL);
+        if (localEpoch < 0)
+        {
+            return 0;
+        }
+
+        return static_cast<uint32_t>(localEpoch);
+    }
+
+    void formatDateTime(char *buffer, size_t bufferSize, uint32_t epochSeconds)
+    {
+        DateTimeParts parts = convertEpochToDateTime(epochSeconds);
+        snprintf(buffer, bufferSize, "%04u-%02u-%02u %02u:%02u:%02u",
+                 parts.year, parts.month, parts.day, parts.hour, parts.minute, parts.second);
+    }
+}
+
 GpsReader gps;
 Application application;
 Storage storage;
@@ -17,6 +116,7 @@ Input input;
 
 OledDisplay oled;
 Screen screen(oled);
+int16_t userTimezoneOffsetMinutes = 0;
 
 void setup()
 {
@@ -40,6 +140,8 @@ void setup()
     applicationUserProfile.ageYears = storedUserProfile.ageYears;
     applicationUserProfile.isMale = storedUserProfile.isMale;
     applicationUserProfile.restingHeartRateBpm = storedUserProfile.restingHeartRateBpm;
+    applicationUserProfile.timezoneOffsetMinutes = storedUserProfile.timezoneOffsetMinutes;
+    userTimezoneOffsetMinutes = storedUserProfile.timezoneOffsetMinutes;
 
     application.begin(applicationUserProfile);
 
@@ -80,6 +182,8 @@ void loop()
             gpsFix.headingDegrees = record.headingDegrees;
             gpsFix.satelliteCount = record.satelliteCount;
             gpsFix.timestampMilliseconds = record.timestampMilliseconds;
+            gpsFix.hasUtcTime = record.hasUtcTime;
+            gpsFix.utcEpochSeconds = record.utcEpochSeconds;
 
             ApplicationResult applicationResult = application.update(gpsFix);
 
@@ -98,6 +202,7 @@ void loop()
                 storedTrackPoint.longitude = applicationResult.trackPoint.longitude;
                 storedTrackPoint.altitudeMeters = applicationResult.trackPoint.altitudeMeters;
                 storedTrackPoint.timestampMilliseconds = applicationResult.trackPoint.timestampMilliseconds;
+                storedTrackPoint.utcEpochSeconds = gpsFix.hasUtcTime ? gpsFix.utcEpochSeconds : 0;
                 storage.update(storedTrackPoint);
             }
 
@@ -120,7 +225,26 @@ void loop()
                 Serial.print(" km");
                 Serial.print("  AVG: ");
                 Serial.print(applicationResult.stats.averageSpeedKmh, 2);
-                Serial.println(" km/h");
+                Serial.print(" km/h");
+
+                if (gpsFix.hasUtcTime)
+                {
+                    char utcBuffer[24];
+                    char localBuffer[24];
+
+                    uint32_t localEpochSeconds = applyTimezoneOffset(gpsFix.utcEpochSeconds, userTimezoneOffsetMinutes);
+                    formatDateTime(utcBuffer, sizeof(utcBuffer), gpsFix.utcEpochSeconds);
+                    formatDateTime(localBuffer, sizeof(localBuffer), localEpochSeconds);
+
+                    Serial.print("  UTC: ");
+                    Serial.print(utcBuffer);
+                    Serial.print("  LOCAL: ");
+                    Serial.println(localBuffer);
+                }
+                else
+                {
+                    Serial.println("  UTC: N/A");
+                }
             }
         }
     }

@@ -116,6 +116,9 @@ void UbxReader::begin()
     enableNavigationMessage(GpsProtocol::NavigationMessageId::NavigationSolution);
     delay(200);
 
+    enableNavigationMessage(GpsProtocol::NavigationMessageId::TimeUtc);
+    delay(200);
+
     setUpdateRate(1000);
     delay(200);
 

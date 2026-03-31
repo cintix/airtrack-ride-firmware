@@ -9,6 +9,7 @@ struct StoredUserProfile
     uint8_t ageYears;
     bool isMale;
     uint8_t restingHeartRateBpm;
+    int16_t timezoneOffsetMinutes;
 };
 
 #endif

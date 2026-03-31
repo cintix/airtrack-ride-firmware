@@ -9,6 +9,7 @@ struct StoredTrackPoint
     float longitude;
     float altitudeMeters;
     uint32_t timestampMilliseconds;
+    uint32_t utcEpochSeconds;
 };
 
 #endif

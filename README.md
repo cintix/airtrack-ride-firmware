@@ -45,7 +45,8 @@ Each module has a single responsibility.
 
 AirTrack Ride uses the **u-blox UBX binary protocol** instead of the traditional NMEA ASCII protocol.
 
-The firmware listens for the **UBX-NAV-PVT message**, which provides all required navigation data in a single packet.
+The firmware listens for multiple UBX navigation messages:
+**NAV-POSLLH**, **NAV-VELNED**, **NAV-SOL**, and **NAV-TIMEUTC**.
 
 ---
 
@@ -86,15 +87,18 @@ Advantages of UBX:
 
 ---
 
-# UBX Message Used
+# UBX Messages Used
 
 The firmware uses:
 
 ```
-UBX-NAV-PVT
+UBX-NAV-POSLLH
+UBX-NAV-VELNED
+UBX-NAV-SOL
+UBX-NAV-TIMEUTC
 ```
 
-This message provides:
+These messages provide:
 
 * latitude
 * longitude
@@ -105,7 +109,7 @@ This message provides:
 * fix type
 * accuracy
 
-All navigation data is received in **one message per navigation cycle**.
+Together these messages provide position, speed, fix/satellite status, and UTC time.
 
 ---
 

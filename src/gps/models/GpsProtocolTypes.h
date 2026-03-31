@@ -15,6 +15,7 @@ namespace GpsProtocol
     {
         static const uint8_t PositionLatitudeLongitudeHeight = 0x02; // POSLLH
         static const uint8_t VelocityNorthEastDown = 0x12;           // VELNED
+        static const uint8_t TimeUtc = 0x21; // NAV-TIMEUTC
         static const uint8_t SatelliteInfo = 0x35; // NAV-SAT
         static const uint8_t NavigationSolution = 0x06; // NAV-SOL ✔
     }

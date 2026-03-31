@@ -45,7 +45,7 @@ ApplicationResult Application::update(const GpsFix &gpsFix)
 
     if (!initialized)
     {
-        begin({75.0f, 30, true, 60});
+        begin({75.0f, 30, true, 60, 60});
     }
 
     if (!trackingEnabled)

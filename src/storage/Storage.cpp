@@ -45,5 +45,6 @@ StoredUserProfile Storage::loadUserProfile() const
     profile.ageYears = 30;
     profile.isMale = true;
     profile.restingHeartRateBpm = 60;
+    profile.timezoneOffsetMinutes = 60;
     return profile;
 }

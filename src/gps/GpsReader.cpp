@@ -1,5 +1,6 @@
 #include "GpsReader.h"
 #include <Arduino.h>
+#include <string.h>
 #include "../config/Config.h"
 
 void GpsReader::begin()
@@ -52,7 +53,11 @@ void GpsReader::handlePacket(const UbxPacket &packet)
     else if (packet.messageId == GpsProtocol::NavigationMessageId::NavigationSolution)
     {
         decodeNavigation(packet);
-    }   
+    }
+    else if (packet.messageId == GpsProtocol::NavigationMessageId::TimeUtc)
+    {
+        decodeTimeUtc(packet);
+    }
 
 }
 
@@ -108,6 +113,91 @@ void GpsReader::decodeNavigation(const UbxPacket &packet)
 
     currentRecord.timestampMilliseconds = millis();
     recordAvailable = true;
+}
+
+void GpsReader::decodeTimeUtc(const UbxPacket &packet)
+{
+    if (packet.payloadLength < 20)
+    {
+        currentRecord.hasUtcTime = false;
+        currentRecord.utcEpochSeconds = 0;
+        return;
+    }
+
+    const uint8_t *payload = packet.payload;
+
+    uint16_t year = 0;
+    memcpy(&year, payload + 12, sizeof(uint16_t));
+
+    uint8_t month = payload[14];
+    uint8_t day = payload[15];
+    uint8_t hour = payload[16];
+    uint8_t minute = payload[17];
+    uint8_t second = payload[18];
+    uint8_t validFlags = payload[19];
+
+    const uint8_t validUtcBit = 0x04;
+    bool hasValidUtc = (validFlags & validUtcBit) != 0;
+    bool hasValidDate = (year >= 1970 && month >= 1 && month <= 12 && day >= 1 && day <= 31);
+    bool hasValidTime = (hour <= 23 && minute <= 59 && second <= 60);
+
+    if (!hasValidUtc || !hasValidDate || !hasValidTime)
+    {
+        currentRecord.hasUtcTime = false;
+        currentRecord.utcEpochSeconds = 0;
+        return;
+    }
+
+    currentRecord.hasUtcTime = true;
+    currentRecord.utcEpochSeconds = convertUtcToEpochSeconds(year, month, day, hour, minute, second);
+}
+
+bool GpsReader::isLeapYear(uint16_t year) const
+{
+    if (year % 400 == 0)
+    {
+        return true;
+    }
+
+    if (year % 100 == 0)
+    {
+        return false;
+    }
+
+    return (year % 4) == 0;
+}
+
+uint32_t GpsReader::convertUtcToEpochSeconds(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second) const
+{
+    static const uint8_t daysInMonth[] = {
+        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+    };
+
+    uint32_t daysSinceEpoch = 0;
+
+    for (uint16_t currentYear = 1970; currentYear < year; currentYear++)
+    {
+        daysSinceEpoch += isLeapYear(currentYear) ? 366 : 365;
+    }
+
+    for (uint8_t currentMonth = 1; currentMonth < month; currentMonth++)
+    {
+        daysSinceEpoch += daysInMonth[currentMonth - 1];
+
+        if (currentMonth == 2 && isLeapYear(year))
+        {
+            daysSinceEpoch += 1;
+        }
+    }
+
+    daysSinceEpoch += static_cast<uint32_t>(day - 1);
+
+    uint32_t epochSeconds = daysSinceEpoch * 86400UL;
+    epochSeconds += static_cast<uint32_t>(hour) * 3600UL;
+    epochSeconds += static_cast<uint32_t>(minute) * 60UL;
+    epochSeconds += static_cast<uint32_t>(second > 59 ? 59 : second);
+
+    return epochSeconds;
 }
 
 void GpsReader::configurePlatformModel(uint8_t platformModel)

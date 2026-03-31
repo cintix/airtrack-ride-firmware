@@ -14,6 +14,8 @@ struct GpsFix
 
     uint8_t satelliteCount;
     uint32_t timestampMilliseconds;
+    bool hasUtcTime;
+    uint32_t utcEpochSeconds;
 };
 
 #endif
