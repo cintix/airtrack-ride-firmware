@@ -75,8 +75,16 @@ void ClientSync::begin()
         LittleFS.mkdir("/config");
     }
 
-    beginWiFi();
-    beginWebServer();
+    if (wifiEnabled)
+    {
+        beginWiFi();
+        beginWebServer();
+    }
+    else
+    {
+        Serial.println("Client: WiFi startup skipped (disabled)");
+    }
+
     initialized = true;
 }
 
@@ -87,7 +95,15 @@ void ClientSync::update()
         begin();
     }
 
-    server.handleClient();
+    if (!wifiEnabled)
+    {
+        return;
+    }
+
+    if (webServerRunning)
+    {
+        server.handleClient();
+    }
 
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -103,6 +119,33 @@ void ClientSync::update()
     lastConnectionLogMilliseconds = now;
     Serial.print("Client: STA connected, IP=");
     Serial.println(WiFi.localIP());
+}
+
+void ClientSync::setWifiEnabled(bool enabled)
+{
+    if (enabled == wifiEnabled)
+    {
+        return;
+    }
+
+    wifiEnabled = enabled;
+    Serial.print("Client: WiFi ");
+    Serial.println(wifiEnabled ? "ENABLED" : "DISABLED");
+
+    if (!initialized)
+    {
+        return;
+    }
+
+    if (wifiEnabled)
+    {
+        beginWiFi();
+        beginWebServer();
+        return;
+    }
+
+    stopWebServer();
+    stopWiFi();
 }
 
 void ClientSync::beginWiFi()
@@ -130,6 +173,16 @@ void ClientSync::beginWiFi()
     }
 
     tryConnectStation();
+}
+
+void ClientSync::stopWiFi()
+{
+    WiFi.scanDelete();
+    WiFi.softAPdisconnect(true);
+    WiFi.disconnect(true, false);
+    delay(50);
+    WiFi.mode(WIFI_OFF);
+    Serial.println("Client: WiFi radio turned off");
 }
 
 void ClientSync::tryConnectStation()
@@ -179,29 +232,51 @@ void ClientSync::startStationConnection(const String &ssid, const String &passwo
 
 void ClientSync::beginWebServer()
 {
-    server.on("/", HTTP_GET, [this]() { handleRoot(); });
+    if (!webServerRoutesRegistered)
+    {
+        server.on("/", HTTP_GET, [this]() { handleRoot(); });
 
-    server.on("/setup", HTTP_GET, [this]() { sendFile("/www/setup/index.html", "text/html; charset=utf-8"); });
-    server.on("/setup/", HTTP_GET, [this]() { sendFile("/www/setup/index.html", "text/html; charset=utf-8"); });
-    server.on("/app", HTTP_GET, [this]() { sendFile("/www/app/index.html", "text/html; charset=utf-8"); });
-    server.on("/app/", HTTP_GET, [this]() { sendFile("/www/app/index.html", "text/html; charset=utf-8"); });
+        server.on("/setup", HTTP_GET, [this]() { sendFile("/www/setup/index.html", "text/html; charset=utf-8"); });
+        server.on("/setup/", HTTP_GET, [this]() { sendFile("/www/setup/index.html", "text/html; charset=utf-8"); });
+        server.on("/app", HTTP_GET, [this]() { sendFile("/www/app/index.html", "text/html; charset=utf-8"); });
+        server.on("/app/", HTTP_GET, [this]() { sendFile("/www/app/index.html", "text/html; charset=utf-8"); });
 
-    server.on("/shared/site.css", HTTP_GET, [this]() { sendFile("/www/shared/site.css", "text/css; charset=utf-8"); });
-    server.on("/setup/setup.js", HTTP_GET, [this]() { sendFile("/www/setup/setup.js", "application/javascript; charset=utf-8"); });
-    server.on("/app/app.js", HTTP_GET, [this]() { sendFile("/www/app/app.js", "application/javascript; charset=utf-8"); });
+        server.on("/shared/site.css", HTTP_GET, [this]() { sendFile("/www/shared/site.css", "text/css; charset=utf-8"); });
+        server.on("/setup/setup.js", HTTP_GET, [this]() { sendFile("/www/setup/setup.js", "application/javascript; charset=utf-8"); });
+        server.on("/app/app.js", HTTP_GET, [this]() { sendFile("/www/app/app.js", "application/javascript; charset=utf-8"); });
 
-    server.on("/api/status", HTTP_GET, [this]() { handleStatus(); });
-    server.on("/api/wifi/scan", HTTP_GET, [this]() { handleWifiScan(); });
-    server.on("/api/setup/wifi", HTTP_POST, [this]() { handleWifiSave(); });
-    server.on("/api/profile", HTTP_GET, [this]() { handleProfileGet(); });
-    server.on("/api/profile", HTTP_POST, [this]() { handleProfileSave(); });
-    server.on("/api/rides", HTTP_GET, [this]() { handleRides(); });
-    server.on("/api/reboot", HTTP_POST, [this]() { handleReboot(); });
+        server.on("/api/status", HTTP_GET, [this]() { handleStatus(); });
+        server.on("/api/wifi/scan", HTTP_GET, [this]() { handleWifiScan(); });
+        server.on("/api/setup/wifi", HTTP_POST, [this]() { handleWifiSave(); });
+        server.on("/api/profile", HTTP_GET, [this]() { handleProfileGet(); });
+        server.on("/api/profile", HTTP_POST, [this]() { handleProfileSave(); });
+        server.on("/api/rides", HTTP_GET, [this]() { handleRides(); });
+        server.on("/api/reboot", HTTP_POST, [this]() { handleReboot(); });
 
-    server.onNotFound([this]() { handleNotFound(); });
+        server.onNotFound([this]() { handleNotFound(); });
+        webServerRoutesRegistered = true;
+    }
+
+    if (webServerRunning)
+    {
+        return;
+    }
 
     server.begin();
+    webServerRunning = true;
     Serial.println("Client: HTTP server started on port 80");
+}
+
+void ClientSync::stopWebServer()
+{
+    if (!webServerRunning)
+    {
+        return;
+    }
+
+    server.stop();
+    webServerRunning = false;
+    Serial.println("Client: HTTP server stopped");
 }
 
 void ClientSync::handleRoot()

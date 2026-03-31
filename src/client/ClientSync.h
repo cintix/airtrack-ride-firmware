@@ -8,6 +8,7 @@ class ClientSync
 public:
     void begin();
     void update();
+    void setWifiEnabled(bool enabled);
 
 private:
     enum class RequestContext
@@ -23,11 +24,16 @@ private:
     };
 
     bool initialized = false;
+    bool wifiEnabled = true;
+    bool webServerRoutesRegistered = false;
+    bool webServerRunning = false;
     unsigned long lastConnectionLogMilliseconds = 0;
     WebServer server = WebServer(80);
 
     void beginWiFi();
     void beginWebServer();
+    void stopWiFi();
+    void stopWebServer();
     void tryConnectStation();
     void handleRoot();
     void handleStatus();

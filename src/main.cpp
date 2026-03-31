@@ -234,6 +234,7 @@ void setup()
     input.begin();
     oled.begin();
     client.begin();
+    client.setWifiEnabled(!application.isTrackingEnabled());
 
     // Ensure the display is visibly active even before the first valid GPS fix.
     screen.update({});
@@ -255,6 +256,7 @@ void loop()
         bool trackingEnabled = !application.isTrackingEnabled();
         application.setTrackingEnabled(trackingEnabled);
         storage.setTrackingEnabled(trackingEnabled);
+        client.setWifiEnabled(!trackingEnabled);
 
         Serial.print("Tracking: ");
         Serial.println(trackingEnabled ? "ON" : "OFF");
