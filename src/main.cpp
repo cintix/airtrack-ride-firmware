@@ -141,6 +141,8 @@ void setup()
     applicationUserProfile.isMale = storedUserProfile.isMale;
     applicationUserProfile.restingHeartRateBpm = storedUserProfile.restingHeartRateBpm;
     applicationUserProfile.timezoneOffsetMinutes = storedUserProfile.timezoneOffsetMinutes;
+    applicationUserProfile.stoppedSpeedThresholdKmh = storedUserProfile.stoppedSpeedThresholdKmh;
+    applicationUserProfile.stoppedDelaySeconds = storedUserProfile.stoppedDelaySeconds;
     userTimezoneOffsetMinutes = storedUserProfile.timezoneOffsetMinutes;
 
     application.begin(applicationUserProfile);

@@ -10,6 +10,8 @@ struct UserProfile
     bool isMale;
     uint8_t restingHeartRateBpm;
     int16_t timezoneOffsetMinutes;
+    float stoppedSpeedThresholdKmh;
+    int16_t stoppedDelaySeconds;
 };
 
 #endif

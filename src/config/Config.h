@@ -61,6 +61,8 @@
 
 #define TRACK_MIN_DISTANCE_METERS 25
 #define TRACK_MIN_INTERVAL_SECONDS 5
+#define MOVING_STOP_SPEED_THRESHOLD_KMH 0.7f
+#define MOVING_STOP_DELAY_SECONDS 3
 
 /*
     Storage buffer configuration

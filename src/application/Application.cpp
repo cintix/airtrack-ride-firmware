@@ -7,6 +7,7 @@ void Application::begin(const UserProfile &userProfile)
     profile = userProfile;
     initialized = true;
     trackingEnabled = false;
+    resolveMovementThresholds();
     resetTrackingState();
 }
 
@@ -45,7 +46,7 @@ ApplicationResult Application::update(const GpsFix &gpsFix)
 
     if (!initialized)
     {
-        begin({75.0f, 30, true, 60, 60});
+        begin({75.0f, 30, true, 60, 60, 0.0f, 0});
     }
 
     if (!trackingEnabled)
@@ -77,11 +78,26 @@ ApplicationResult Application::update(const GpsFix &gpsFix)
         if (deltaMilliseconds > 0 && deltaMilliseconds < 120000)
         {
             float deltaHours = deltaMilliseconds / 3600000.0f;
-            if (gpsFix.groundSpeedMetersPerSecond > 0.5f)
+            float speedKmh = gpsFix.groundSpeedMetersPerSecond * 3.6f;
+            uint32_t movingDeltaMilliseconds = 0;
+            if (speedKmh > movingStopSpeedThresholdKmh)
             {
-                stats.movingSeconds += deltaMilliseconds / 1000;
+                stationaryDurationMilliseconds = 0;
+                movingDeltaMilliseconds = deltaMilliseconds;
             }
-            stats.caloriesBurned += estimateCyclingMet(gpsFix.groundSpeedMetersPerSecond * 3.6f) * profile.weightKg * deltaHours;
+            else
+            {
+                uint32_t stopDelayMilliseconds = static_cast<uint32_t>(movingStopDelaySeconds) * 1000UL;
+                if (stationaryDurationMilliseconds < stopDelayMilliseconds)
+                {
+                    uint32_t remainingGraceMilliseconds = stopDelayMilliseconds - stationaryDurationMilliseconds;
+                    movingDeltaMilliseconds = (deltaMilliseconds < remainingGraceMilliseconds) ? deltaMilliseconds : remainingGraceMilliseconds;
+                }
+                stationaryDurationMilliseconds += deltaMilliseconds;
+            }
+
+            stats.movingSeconds += movingDeltaMilliseconds / 1000;
+            stats.caloriesBurned += estimateCyclingMet(speedKmh) * profile.weightKg * deltaHours;
         }
 
         lastFix = gpsFix;
@@ -152,6 +168,22 @@ void Application::resetTrackingState()
     lastTrackPoint = {};
     rideStartTimestampMilliseconds = 0;
     lastTrackPointTimestampMilliseconds = 0;
+    stationaryDurationMilliseconds = 0;
+}
+
+void Application::resolveMovementThresholds()
+{
+    movingStopSpeedThresholdKmh = MOVING_STOP_SPEED_THRESHOLD_KMH;
+    if (profile.stoppedSpeedThresholdKmh > 0.0f)
+    {
+        movingStopSpeedThresholdKmh = profile.stoppedSpeedThresholdKmh;
+    }
+
+    movingStopDelaySeconds = MOVING_STOP_DELAY_SECONDS;
+    if (profile.stoppedDelaySeconds > 0)
+    {
+        movingStopDelaySeconds = static_cast<uint16_t>(profile.stoppedDelaySeconds);
+    }
 }
 
 float Application::calculateDistanceMeters(float latitudeA, float longitudeA, float latitudeB, float longitudeB) const

@@ -46,5 +46,7 @@ StoredUserProfile Storage::loadUserProfile() const
     profile.isMale = true;
     profile.restingHeartRateBpm = 60;
     profile.timezoneOffsetMinutes = 60;
+    profile.stoppedSpeedThresholdKmh = 0.0f;
+    profile.stoppedDelaySeconds = 0;
     return profile;
 }
