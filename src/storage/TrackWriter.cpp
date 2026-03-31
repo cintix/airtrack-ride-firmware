@@ -1,7 +1,7 @@
 #include "TrackWriter.h"
 #include <Arduino.h>
 
-void TrackWriter::addPoint(const TrackPoint& point)
+void TrackWriter::addPoint(const StoredTrackPoint &point)
 {
     if (bufferedCount >= maxBufferedPoints)
     {

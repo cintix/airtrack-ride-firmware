@@ -6,7 +6,7 @@ bool Storage::begin()
     return true;
 }
 
-void Storage::update(const TrackPoint &point)
+void Storage::update(const StoredTrackPoint &point)
 {
     if (!trackingEnabled)
     {
@@ -38,9 +38,9 @@ void Storage::setTrackingEnabled(bool enabled)
     Serial.println(sessionIndex);
 }
 
-UserProfile Storage::loadUserProfile() const
+StoredUserProfile Storage::loadUserProfile() const
 {
-    UserProfile profile = {};
+    StoredUserProfile profile = {};
     profile.weightKg = 75.0f;
     profile.ageYears = 30;
     profile.isMale = true;

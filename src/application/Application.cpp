@@ -30,13 +30,13 @@ bool Application::isTrackingEnabled() const
     return trackingEnabled;
 }
 
-ApplicationResult Application::update(const GpsRecord &record)
+ApplicationResult Application::update(const GpsFix &gpsFix)
 {
     ApplicationResult result = {};
     result.hasDisplayData = true;
     result.hasTrackPoint = false;
     result.isTrackingActive = trackingEnabled;
-    result.displayData.speedKm = record.groundSpeedMetersPerSecond * 3.6f;
+    result.displayData.speedKm = gpsFix.groundSpeedMetersPerSecond * 3.6f;
     result.displayData.timeSpentSeconds = stats.elapsedSeconds;
     result.displayData.distanceKm = stats.distanceMeters / 1000.0f;
     result.displayData.temperatureC = 0.0f;
@@ -48,47 +48,47 @@ ApplicationResult Application::update(const GpsRecord &record)
         begin({75.0f, 30, true, 60});
     }
 
-    if (!record.valid || !trackingEnabled)
+    if (!trackingEnabled)
     {
         return result;
     }
 
     if (!hasLastRecord)
     {
-        rideStartTimestampMilliseconds = record.timestampMilliseconds;
-        lastRecord = record;
+        rideStartTimestampMilliseconds = gpsFix.timestampMilliseconds;
+        lastFix = gpsFix;
         hasLastRecord = true;
         stats.sampleCount = 1;
     }
     else
     {
         float segmentDistanceMeters = calculateDistanceMeters(
-            static_cast<float>(lastRecord.latitude),
-            static_cast<float>(lastRecord.longitude),
-            static_cast<float>(record.latitude),
-            static_cast<float>(record.longitude));
+            static_cast<float>(lastFix.latitude),
+            static_cast<float>(lastFix.longitude),
+            static_cast<float>(gpsFix.latitude),
+            static_cast<float>(gpsFix.longitude));
 
         if (segmentDistanceMeters > 0.0f && segmentDistanceMeters < 1000.0f)
         {
             stats.distanceMeters += segmentDistanceMeters;
         }
 
-        uint32_t deltaMilliseconds = record.timestampMilliseconds - lastRecord.timestampMilliseconds;
+        uint32_t deltaMilliseconds = gpsFix.timestampMilliseconds - lastFix.timestampMilliseconds;
         if (deltaMilliseconds > 0 && deltaMilliseconds < 120000)
         {
             float deltaHours = deltaMilliseconds / 3600000.0f;
-            if (record.groundSpeedMetersPerSecond > 0.5f)
+            if (gpsFix.groundSpeedMetersPerSecond > 0.5f)
             {
                 stats.movingSeconds += deltaMilliseconds / 1000;
             }
-            stats.caloriesBurned += estimateCyclingMet(record.groundSpeedMetersPerSecond * 3.6f) * profile.weightKg * deltaHours;
+            stats.caloriesBurned += estimateCyclingMet(gpsFix.groundSpeedMetersPerSecond * 3.6f) * profile.weightKg * deltaHours;
         }
 
-        lastRecord = record;
+        lastFix = gpsFix;
         stats.sampleCount++;
     }
 
-    uint32_t elapsedMilliseconds = record.timestampMilliseconds - rideStartTimestampMilliseconds;
+    uint32_t elapsedMilliseconds = gpsFix.timestampMilliseconds - rideStartTimestampMilliseconds;
     stats.elapsedSeconds = elapsedMilliseconds / 1000;
 
     if (stats.elapsedSeconds > 0)
@@ -110,9 +110,9 @@ ApplicationResult Application::update(const GpsRecord &record)
         float distanceFromLastTrackPoint = calculateDistanceMeters(
             lastTrackPoint.latitude,
             lastTrackPoint.longitude,
-            static_cast<float>(record.latitude),
-            static_cast<float>(record.longitude));
-        uint32_t elapsedSinceLastTrackPointSeconds = (record.timestampMilliseconds - lastTrackPointTimestampMilliseconds) / 1000;
+            static_cast<float>(gpsFix.latitude),
+            static_cast<float>(gpsFix.longitude));
+        uint32_t elapsedSinceLastTrackPointSeconds = (gpsFix.timestampMilliseconds - lastTrackPointTimestampMilliseconds) / 1000;
 
         if (distanceFromLastTrackPoint >= TRACK_MIN_DISTANCE_METERS || elapsedSinceLastTrackPointSeconds >= TRACK_MIN_INTERVAL_SECONDS)
         {
@@ -122,18 +122,18 @@ ApplicationResult Application::update(const GpsRecord &record)
 
     if (result.hasTrackPoint)
     {
-        result.trackPoint.latitude = static_cast<float>(record.latitude);
-        result.trackPoint.longitude = static_cast<float>(record.longitude);
-        result.trackPoint.altitudeMeters = record.altitudeMeters;
-        result.trackPoint.timestampMilliseconds = record.timestampMilliseconds;
+        result.trackPoint.latitude = static_cast<float>(gpsFix.latitude);
+        result.trackPoint.longitude = static_cast<float>(gpsFix.longitude);
+        result.trackPoint.altitudeMeters = gpsFix.altitudeMeters;
+        result.trackPoint.timestampMilliseconds = gpsFix.timestampMilliseconds;
 
         lastTrackPoint = result.trackPoint;
-        lastTrackPointTimestampMilliseconds = record.timestampMilliseconds;
+        lastTrackPointTimestampMilliseconds = gpsFix.timestampMilliseconds;
         hasLastTrackPoint = true;
     }
 
     result.stats = stats;
-    result.displayData.speedKm = record.groundSpeedMetersPerSecond * 3.6f;
+    result.displayData.speedKm = gpsFix.groundSpeedMetersPerSecond * 3.6f;
     result.displayData.timeSpentSeconds = stats.elapsedSeconds;
     result.displayData.distanceKm = stats.distanceMeters / 1000.0f;
     result.displayData.temperatureC = 0.0f;
@@ -148,7 +148,7 @@ void Application::resetTrackingState()
     hasLastRecord = false;
     hasLastTrackPoint = false;
 
-    lastRecord = {};
+    lastFix = {};
     lastTrackPoint = {};
     rideStartTimestampMilliseconds = 0;
     lastTrackPointTimestampMilliseconds = 0;

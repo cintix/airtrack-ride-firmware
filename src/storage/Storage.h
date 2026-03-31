@@ -1,17 +1,17 @@
 #ifndef STORAGE_H
 #define STORAGE_H
 
-#include "../application/models/UserProfile.h"
-#include "../application/models/TrackPoint.h"
+#include "models/StoredUserProfile.h"
+#include "models/StoredTrackPoint.h"
 #include "TrackWriter.h"
 
 class Storage
 {
 public:
     bool begin();
-    void update(const TrackPoint &point);
+    void update(const StoredTrackPoint &point);
     void setTrackingEnabled(bool enabled);
-    UserProfile loadUserProfile() const;
+    StoredUserProfile loadUserProfile() const;
 
 private:
     TrackWriter trackWriter;

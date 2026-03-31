@@ -34,7 +34,14 @@ void setup()
         Serial.println("Storage initialization failed");
     }
 
-    application.begin(storage.loadUserProfile());
+    StoredUserProfile storedUserProfile = storage.loadUserProfile();
+    UserProfile applicationUserProfile = {};
+    applicationUserProfile.weightKg = storedUserProfile.weightKg;
+    applicationUserProfile.ageYears = storedUserProfile.ageYears;
+    applicationUserProfile.isMale = storedUserProfile.isMale;
+    applicationUserProfile.restingHeartRateBpm = storedUserProfile.restingHeartRateBpm;
+
+    application.begin(applicationUserProfile);
 
     input.begin();
     oled.begin();
@@ -65,7 +72,16 @@ void loop()
 
         if (record.valid)
         {
-            ApplicationResult applicationResult = application.update(record);
+            GpsFix gpsFix = {};
+            gpsFix.latitude = record.latitude;
+            gpsFix.longitude = record.longitude;
+            gpsFix.altitudeMeters = record.altitudeMeters;
+            gpsFix.groundSpeedMetersPerSecond = record.groundSpeedMetersPerSecond;
+            gpsFix.headingDegrees = record.headingDegrees;
+            gpsFix.satelliteCount = record.satelliteCount;
+            gpsFix.timestampMilliseconds = record.timestampMilliseconds;
+
+            ApplicationResult applicationResult = application.update(gpsFix);
 
             DisplayRecord displayRecord;
             displayRecord.SpeedKm = applicationResult.displayData.speedKm;
@@ -77,7 +93,12 @@ void loop()
 
             if (applicationResult.hasTrackPoint)
             {
-                storage.update(applicationResult.trackPoint);
+                StoredTrackPoint storedTrackPoint = {};
+                storedTrackPoint.latitude = applicationResult.trackPoint.latitude;
+                storedTrackPoint.longitude = applicationResult.trackPoint.longitude;
+                storedTrackPoint.altitudeMeters = applicationResult.trackPoint.altitudeMeters;
+                storedTrackPoint.timestampMilliseconds = applicationResult.trackPoint.timestampMilliseconds;
+                storage.update(storedTrackPoint);
             }
 
             if (millis() - lastPrint > DEBUG_GPS_PRINT_INTERVAL_MS)

@@ -1,9 +1,9 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
+#include "models/GpsFix.h"
 #include "models/UserProfile.h"
 #include "models/ApplicationResult.h"
-#include "../gps/models/GpsRecord.h"
 
 class Application
 {
@@ -11,7 +11,7 @@ public:
     void begin(const UserProfile &userProfile);
     void setTrackingEnabled(bool enabled);
     bool isTrackingEnabled() const;
-    ApplicationResult update(const GpsRecord &record);
+    ApplicationResult update(const GpsFix &gpsFix);
 
 private:
     UserProfile profile = {};
@@ -22,7 +22,7 @@ private:
     bool hasLastRecord = false;
     bool hasLastTrackPoint = false;
 
-    GpsRecord lastRecord = {};
+    GpsFix lastFix = {};
     TrackPoint lastTrackPoint = {};
 
     uint32_t rideStartTimestampMilliseconds = 0;
