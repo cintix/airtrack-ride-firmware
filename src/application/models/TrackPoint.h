@@ -7,8 +7,8 @@ struct TrackPoint
 {
     float latitude;
     float longitude;
-    float altitude;
-    uint32_t timestamp;
+    float altitudeMeters;
+    uint32_t timestampMilliseconds;
 };
 
 #endif

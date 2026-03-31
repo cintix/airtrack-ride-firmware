@@ -68,4 +68,11 @@
 
 #define TRACK_BUFFER_SIZE 10
 
+/*
+    Input configuration
+*/
+
+#define INPUT_TOGGLE_PIN 10
+#define INPUT_DEBOUNCE_MS 40
+
 #endif
