@@ -78,6 +78,30 @@
 #define INPUT_DEBOUNCE_MS 40
 
 /*
+    Main loop power optimization
+*/
+
+#define MAIN_LOOP_IDLE_DELAY_MS 20
+
+/*
+    Display driver selection
+*/
+
+#define DISPLAY_DRIVER_OLED 0
+#define DISPLAY_DRIVER_EPAPER 1
+#define DISPLAY_DRIVER_TYPE DISPLAY_DRIVER_OLED
+
+/*
+    Screen refresh policy (applies to all display drivers)
+*/
+
+#define SCREEN_MIN_REFRESH_INTERVAL_MS 500
+#define SCREEN_MAX_REFRESH_INTERVAL_MS 2000
+#define SCREEN_SPEED_DELTA_KMH 0.5f
+#define SCREEN_DISTANCE_DELTA_KM 0.01f
+#define SCREEN_TIME_DELTA_SECONDS 1.0f
+
+/*
     WiFi / Client configuration
 */
 

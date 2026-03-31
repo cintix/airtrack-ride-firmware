@@ -5,6 +5,7 @@
 #include "client/ClientSync.h"
 #include "screen/Screen.h"
 #include "screen/OledDisplay.h"
+#include "screen/EPaperDisplay.h"
 #include "screen/models/DisplayRecord.h"
 #include "input/Input.h"
 #include "config/Config.h"
@@ -198,8 +199,13 @@ Storage storage;
 ClientSync client;
 Input input;
 
-OledDisplay oled;
-Screen screen(oled);
+#if DISPLAY_DRIVER_TYPE == DISPLAY_DRIVER_EPAPER
+EPaperDisplay display;
+#else
+OledDisplay display;
+#endif
+
+Screen screen(display);
 int16_t userTimezoneOffsetMinutes = 0;
 
 void setup()
@@ -232,7 +238,7 @@ void setup()
     application.begin(applicationUserProfile);
 
     input.begin();
-    oled.begin();
+    display.begin();
     client.begin();
     client.setWifiEnabled(!application.isTrackingEnabled());
 
@@ -296,4 +302,5 @@ void loop()
     }
 
     client.update();
+    delay(MAIN_LOOP_IDLE_DELAY_MS);
 }
