@@ -1,4 +1,5 @@
 #include "Application.h"
+#include "Arduino.h"
 #include <math.h>
 #include "../config/Config.h"
 
@@ -15,14 +16,20 @@ void Application::setTrackingEnabled(bool enabled)
 {
     if (enabled == trackingEnabled)
     {
+        Serial.print("APP: Tracking unchanged (");
+        Serial.print(trackingEnabled ? "ON" : "OFF");
+        Serial.println(")");
         return;
     }
 
     trackingEnabled = enabled;
+    Serial.print("APP: Tracking set to ");
+    Serial.println(trackingEnabled ? "ON" : "OFF");
 
     if (trackingEnabled)
     {
         resetTrackingState();
+        Serial.println("APP: Tracking state reset");
     }
 }
 

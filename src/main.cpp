@@ -106,6 +106,90 @@ namespace
         snprintf(buffer, bufferSize, "%04u-%02u-%02u %02u:%02u:%02u",
                  parts.year, parts.month, parts.day, parts.hour, parts.minute, parts.second);
     }
+
+    GpsFix toGpsFix(const GpsRecord &record)
+    {
+        GpsFix gpsFix = {};
+        gpsFix.latitude = record.latitude;
+        gpsFix.longitude = record.longitude;
+        gpsFix.altitudeMeters = record.altitudeMeters;
+        gpsFix.groundSpeedMetersPerSecond = record.groundSpeedMetersPerSecond;
+        gpsFix.headingDegrees = record.headingDegrees;
+        gpsFix.satelliteCount = record.satelliteCount;
+        gpsFix.timestampMilliseconds = record.timestampMilliseconds;
+        gpsFix.hasUtcTime = record.hasUtcTime;
+        gpsFix.utcEpochSeconds = record.utcEpochSeconds;
+        return gpsFix;
+    }
+
+    DisplayRecord toDisplayRecord(const ApplicationResult &applicationResult)
+    {
+        DisplayRecord displayRecord = {};
+        displayRecord.SpeedKm = applicationResult.displayData.speedKm;
+        displayRecord.timeSpent = applicationResult.displayData.timeSpentSeconds;
+        displayRecord.distanceKm = applicationResult.displayData.distanceKm;
+        displayRecord.tempatureC = applicationResult.displayData.temperatureC;
+        displayRecord.timeStarted = applicationResult.displayData.timeStartedSeconds;
+        return displayRecord;
+    }
+
+    void printGpsDebug(const GpsRecord &record,
+                       bool hasFix,
+                       const ApplicationResult &applicationResult,
+                       uint32_t &lastPrint,
+                       int16_t userTimezoneOffsetMinutes)
+    {
+        if (millis() - lastPrint <= DEBUG_GPS_PRINT_INTERVAL_MS)
+        {
+            return;
+        }
+
+        lastPrint = millis();
+
+        Serial.print("FIX: ");
+        Serial.print(hasFix ? "YES" : "NO");
+        Serial.print("  SAT: ");
+        Serial.print(record.satelliteCount);
+        Serial.print("  LAT: ");
+        Serial.print(record.latitude, 7);
+        Serial.print("  LON: ");
+        Serial.print(record.longitude, 7);
+        Serial.print("  SPEED: ");
+
+        if (hasFix)
+        {
+            Serial.print(applicationResult.displayData.speedKm, 2);
+        }
+        else
+        {
+            Serial.print(record.groundSpeedMetersPerSecond * 3.6f, 2);
+        }
+
+        Serial.print(" km/h  DIST: ");
+        Serial.print(applicationResult.stats.distanceMeters / 1000.0f, 2);
+        Serial.print(" km  AVG: ");
+        Serial.print(applicationResult.stats.averageSpeedKmh, 2);
+        Serial.print(" km/h");
+
+        if (record.hasUtcTime)
+        {
+            char utcBuffer[24];
+            char localBuffer[24];
+
+            uint32_t localEpochSeconds = applyTimezoneOffset(record.utcEpochSeconds, userTimezoneOffsetMinutes);
+            formatDateTime(utcBuffer, sizeof(utcBuffer), record.utcEpochSeconds);
+            formatDateTime(localBuffer, sizeof(localBuffer), localEpochSeconds);
+
+            Serial.print("  UTC: ");
+            Serial.print(utcBuffer);
+            Serial.print("  LOCAL: ");
+            Serial.println(localBuffer);
+        }
+        else
+        {
+            Serial.println("  UTC: N/A");
+        }
+    }
 }
 
 GpsReader gps;
@@ -149,6 +233,10 @@ void setup()
 
     input.begin();
     oled.begin();
+    client.begin();
+
+    // Ensure the display is visibly active even before the first valid GPS fix.
+    screen.update({});
 
     Serial.println("AirTrack Ride firmware is ready...");
 }
@@ -159,6 +247,8 @@ void loop()
     input.update();
 
     static uint32_t lastPrint = 0;
+    static ApplicationResult lastApplicationResult = {};
+    static DisplayRecord lastDisplayRecord = {};
 
     if (input.IsToggled())
     {
@@ -170,32 +260,21 @@ void loop()
         Serial.println(trackingEnabled ? "ON" : "OFF");
     }
 
-    if (gps.hasRecord())
+    bool hasRecord = gps.hasRecord();
+    GpsRecord record = {};
+    bool hasFix = false;
+
+    if (hasRecord)
     {
-        GpsRecord record = gps.getRecord();
+        record = gps.getRecord();
+        hasFix = record.valid;
 
-        if (record.valid)
+        if (hasFix)
         {
-            GpsFix gpsFix = {};
-            gpsFix.latitude = record.latitude;
-            gpsFix.longitude = record.longitude;
-            gpsFix.altitudeMeters = record.altitudeMeters;
-            gpsFix.groundSpeedMetersPerSecond = record.groundSpeedMetersPerSecond;
-            gpsFix.headingDegrees = record.headingDegrees;
-            gpsFix.satelliteCount = record.satelliteCount;
-            gpsFix.timestampMilliseconds = record.timestampMilliseconds;
-            gpsFix.hasUtcTime = record.hasUtcTime;
-            gpsFix.utcEpochSeconds = record.utcEpochSeconds;
-
+            GpsFix gpsFix = toGpsFix(record);
             ApplicationResult applicationResult = application.update(gpsFix);
-
-            DisplayRecord displayRecord;
-            displayRecord.SpeedKm = applicationResult.displayData.speedKm;
-            displayRecord.timeSpent = applicationResult.displayData.timeSpentSeconds;
-            displayRecord.distanceKm = applicationResult.displayData.distanceKm;
-            displayRecord.tempatureC = applicationResult.displayData.temperatureC;
-            displayRecord.timeStarted = applicationResult.displayData.timeStartedSeconds;
-            screen.update(displayRecord);
+            lastApplicationResult = applicationResult;
+            lastDisplayRecord = toDisplayRecord(applicationResult);
 
             if (applicationResult.hasTrackPoint)
             {
@@ -207,48 +286,11 @@ void loop()
                 storedTrackPoint.utcEpochSeconds = gpsFix.hasUtcTime ? gpsFix.utcEpochSeconds : 0;
                 storage.update(storedTrackPoint);
             }
-
-            if (millis() - lastPrint > DEBUG_GPS_PRINT_INTERVAL_MS)
-            {
-                lastPrint = millis();
-
-                Serial.print("FIX: YES");
-                Serial.print("  SAT: ");
-                Serial.print(record.satelliteCount);
-                Serial.print("  LAT: ");
-                Serial.print(record.latitude, 7);
-                Serial.print("  LON: ");
-                Serial.print(record.longitude, 7);
-                Serial.print("  SPEED: ");
-                Serial.print(applicationResult.displayData.speedKm, 2);
-                Serial.print(" km/h");
-                Serial.print("  DIST: ");
-                Serial.print(applicationResult.stats.distanceMeters / 1000.0f, 2);
-                Serial.print(" km");
-                Serial.print("  AVG: ");
-                Serial.print(applicationResult.stats.averageSpeedKmh, 2);
-                Serial.print(" km/h");
-
-                if (gpsFix.hasUtcTime)
-                {
-                    char utcBuffer[24];
-                    char localBuffer[24];
-
-                    uint32_t localEpochSeconds = applyTimezoneOffset(gpsFix.utcEpochSeconds, userTimezoneOffsetMinutes);
-                    formatDateTime(utcBuffer, sizeof(utcBuffer), gpsFix.utcEpochSeconds);
-                    formatDateTime(localBuffer, sizeof(localBuffer), localEpochSeconds);
-
-                    Serial.print("  UTC: ");
-                    Serial.print(utcBuffer);
-                    Serial.print("  LOCAL: ");
-                    Serial.println(localBuffer);
-                }
-                else
-                {
-                    Serial.println("  UTC: N/A");
-                }
-            }
         }
+
+        // Keep display alive regardless of GPS fix state.
+        screen.update(lastDisplayRecord);
+        printGpsDebug(record, hasFix, lastApplicationResult, lastPrint, userTimezoneOffsetMinutes);
     }
 
     client.update();

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AirTrack Dashboard</title>
+  <link rel="stylesheet" href="/shared/site.css">
+</head>
+<body>
+  <main>
+    <section class="hero reveal">
+      <div class="brand-line">
+        <div class="brand">AirTrack Ride Ledger</div>
+        <div class="status-chip" id="context-chip">STA MODE</div>
+      </div>
+      <h1>Ture, statistik og ruteoverblik i ét cockpit.</h1>
+      <p class="lead">Du er nu på dashboardet via dit eget netværk. Her kan du følge de seneste ture, se datahistorik og senere synkronisere til eksterne services.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card col-4 reveal d2">
+        <h2>I dag</h2>
+        <div class="kpi"><span class="label">Distance</span><span class="value" id="today-distance">-</span></div>
+        <div class="kpi"><span class="label">Tid</span><span class="value" id="today-duration">-</span></div>
+        <div class="kpi"><span class="label">Gns. fart</span><span class="value" id="today-avg">-</span></div>
+        <div class="kpi"><span class="label">Kalorier</span><span class="value" id="today-calories">-</span></div>
+      </article>
+
+      <article class="card col-8 reveal d3">
+        <h2>Rute-plot (placeholder)</h2>
+        <div class="route">
+          <svg viewBox="0 0 800 240" preserveAspectRatio="none" role="img" aria-label="Rute preview">
+            <defs>
+              <linearGradient id="trail" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0%" stop-color="#1f4c44"/>
+                <stop offset="100%" stop-color="#bb4d2c"/>
+              </linearGradient>
+            </defs>
+            <path id="route-path" d="M40,180 L760,70"
+                  fill="none" stroke="url(#trail)" stroke-width="7" stroke-linecap="round"/>
+            <circle id="route-start" cx="40" cy="180" r="6" fill="#1f4c44"/>
+            <circle id="route-end" cx="760" cy="70" r="7" fill="#bb4d2c"/>
+          </svg>
+        </div>
+        <p class="note" id="route-note">Viser rute fra seneste tur.</p>
+      </article>
+
+      <article class="card col-7 reveal d3">
+        <h2>Seneste ture</h2>
+        <div id="rides-list">
+          <div class="kpi"><span class="label">Indlæser ture...</span><span class="value">-</span></div>
+        </div>
+        <div class="actions">
+          <button class="btn-primary" id="open-rides">Åbn ture</button>
+          <button class="btn-secondary" id="export-data">Eksportér data</button>
+        </div>
+      </article>
+
+      <article class="card col-5 reveal d2">
+        <h2>Synk status</h2>
+        <div class="kpi"><span class="label">Mode</span><span class="value" id="mode">-</span></div>
+        <div class="kpi"><span class="label">STA IP</span><span class="value" id="sta-ip">-</span></div>
+        <div class="kpi"><span class="label">AP IP</span><span class="value" id="ap-ip">-</span></div>
+        <div class="kpi"><span class="label">Uptime</span><span class="value" id="uptime">-</span></div>
+        <div class="actions">
+          <button class="btn-secondary" id="edit-profile">Redigér profil</button>
+          <button class="btn-secondary" id="open-setup">Gå til setup</button>
+        </div>
+      </article>
+    </section>
+  </main>
+  <script src="/app/app.js"></script>
+</body>
+</html>

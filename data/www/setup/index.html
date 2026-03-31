@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AirTrack Setup</title>
+  <link rel="stylesheet" href="/shared/site.css">
+</head>
+<body>
+  <main>
+    <section class="hero reveal">
+      <div class="brand-line">
+        <div class="brand">AirTrack Provisioning</div>
+        <div class="status-chip" id="context-chip">AP MODE</div>
+      </div>
+      <h1>Klargør modulet på under 2 minutter.</h1>
+      <p class="lead">Du er logget på enhedens Access Point. Her sætter du Wi‑Fi og profil op, så cykelture kan gemmes og senere ses i dashboardet.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card col-7 reveal d2">
+        <h2>Wi‑Fi opsætning</h2>
+        <label for="ssid">Netværksnavn (SSID)</label>
+        <input id="ssid" placeholder="MitHjemmeWifi">
+
+        <label for="password">Kodeord</label>
+        <input id="password" type="password" placeholder="••••••••••••">
+
+        <div class="actions">
+          <button class="btn-primary" id="save-wifi">Gem Wi‑Fi</button>
+          <button class="btn-secondary" id="scan-wifi">Scan netværk</button>
+        </div>
+        <p class="note" id="wifi-note">Gemmer Wi-Fi i LittleFS og forsoger STA-forbindelse med det samme.</p>
+      </article>
+
+      <article class="card col-5 reveal d3">
+        <h2>Enhedsstatus</h2>
+        <div class="kpi"><span class="label">Mode</span><span class="value" id="mode">-</span></div>
+        <div class="kpi"><span class="label">AP IP</span><span class="value" id="ap-ip">-</span></div>
+        <div class="kpi"><span class="label">STA linked</span><span class="value" id="sta-connected">-</span></div>
+        <div class="kpi"><span class="label">Uptime</span><span class="value" id="uptime">-</span></div>
+      </article>
+
+      <article class="card col-12 reveal d3">
+        <h2>Brugerprofil</h2>
+        <div class="grid" style="margin-top:0;">
+          <div class="col-4">
+            <label for="weight">Vægt (kg)</label>
+            <input id="weight" type="number" value="75">
+          </div>
+          <div class="col-4">
+            <label for="age">Alder</label>
+            <input id="age" type="number" value="30">
+          </div>
+          <div class="col-4">
+            <label for="timezone">Timezone (min)</label>
+            <input id="timezone" type="number" value="60">
+          </div>
+          <div class="col-4">
+            <label for="sex">Køn</label>
+            <select id="sex">
+              <option value="male" selected>Mand</option>
+              <option value="female">Kvinde</option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label for="resting-hr">Resting HR</label>
+            <input id="resting-hr" type="number" value="60">
+          </div>
+          <div class="col-4">
+            <label for="stop-threshold">Stop tærskel (km/t)</label>
+            <input id="stop-threshold" type="number" step="0.1" value="0.7">
+          </div>
+          <div class="col-4">
+            <label for="stop-delay">Stop delay (s)</label>
+            <input id="stop-delay" type="number" value="3">
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn-primary" id="save-profile">Gem profil</button>
+          <button class="btn-secondary" id="reboot">Genstart enhed</button>
+        </div>
+        <p class="note" id="profile-note">Du kan konfigurere profil uden at forbinde til internet.</p>
+      </article>
+    </section>
+  </main>
+  <script src="/setup/setup.js"></script>
+</body>
+</html>

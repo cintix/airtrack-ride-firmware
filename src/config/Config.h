@@ -77,4 +77,16 @@
 #define INPUT_TOGGLE_PIN 10
 #define INPUT_DEBOUNCE_MS 40
 
+/*
+    WiFi / Client configuration
+*/
+
+#define WIFI_AP_SSID_PREFIX "AirTrack"
+#define WIFI_AP_PASSWORD "airtrack123"
+
+// Keep empty to skip STA connect until credentials are configured via setup UI.
+#define WIFI_STA_SSID ""
+#define WIFI_STA_PASSWORD ""
+#define WIFI_STA_CONNECT_TIMEOUT_MS 10000UL
+
 #endif
