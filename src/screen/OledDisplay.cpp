@@ -13,7 +13,7 @@ void OledDisplay::updateDisplay(const DisplayRecord& record) {
         u8g.drawStr(0, 20, "Speed:");
 
         char buffer[10];
-        sprintf(buffer, "%.2f km/t", record.distanceKm);
+        sprintf(buffer, "%.2f km/t", record.SpeedKm);
         u8g.drawStr(0, 40, buffer);
 
     } while (u8g.nextPage());
