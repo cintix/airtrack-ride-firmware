@@ -35,8 +35,8 @@ void setup()
     }
 
     application.begin(storage.loadUserProfile());
-    input.begin();
 
+    input.begin();
     oled.begin();
 
     Serial.println("AirTrack Ride firmware is ready...");
@@ -101,7 +101,6 @@ void loop()
                 Serial.print(applicationResult.stats.averageSpeedKmh, 2);
                 Serial.println(" km/h");
             }
-
         }
     }
 
