@@ -29,6 +29,12 @@ void ClientSync::begin()
         LittleFS.mkdir("/config");
     }
 
+    File wifiFile = LittleFS.open("/config/wifi.txt", "a");
+    if (wifiFile)
+    {
+        wifiFile.close();
+    }
+
     wifiManager.begin(wifiEnabled);
 
     if (wifiEnabled)

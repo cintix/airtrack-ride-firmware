@@ -49,6 +49,7 @@ private:
     bool initialized = false;
     bool enabled = true;
     unsigned long lastConnectionLogMilliseconds = 0;
+    unsigned long lastApDiagnosticsLogMilliseconds = 0;
     unsigned long stationConnectStartedMilliseconds = 0;
     unsigned long stationRetryAtMilliseconds = 0;
     uint8_t stationRetryAttempt = 0;
@@ -63,6 +64,7 @@ private:
     void scheduleNextStationRetry(unsigned long nowMilliseconds, const char *reason);
     uint32_t calculateRetryDelayMilliseconds() const;
     const char *wifiStateText() const;
+    bool hasStationCredentialsConfigured() const;
     WifiCredentials loadWifiCredentials() const;
     String jsonEscape(const String &value) const;
 };

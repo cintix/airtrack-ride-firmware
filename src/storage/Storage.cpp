@@ -35,6 +35,12 @@ bool Storage::begin()
         LittleFS.mkdir("/config");
     }
 
+    File profileFile = LittleFS.open(PROFILE_CONFIG_PATH, "a");
+    if (profileFile)
+    {
+        profileFile.close();
+    }
+
     return true;
 }
 

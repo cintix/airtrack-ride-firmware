@@ -1,11 +1,39 @@
 #include "WifiManager.h"
 #include <LittleFS.h>
 #include <esp_system.h>
+#include <cstring>
 #include "../config/Config.h"
 
 namespace
 {
     constexpr const char *WIFI_CONFIG_PATH = "/config/wifi.txt";
+    constexpr const char *CONFIG_DIRECTORY_PATH = "/config";
+
+    bool ensureFilesystemReady()
+    {
+        static bool mounted = false;
+        if (!mounted)
+        {
+            if (!LittleFS.begin(true))
+            {
+                Serial.println("Client: LittleFS mount failed (wifi config unavailable)");
+                return false;
+            }
+
+            mounted = true;
+        }
+
+        if (!LittleFS.exists(CONFIG_DIRECTORY_PATH))
+        {
+            if (!LittleFS.mkdir(CONFIG_DIRECTORY_PATH))
+            {
+                Serial.println("Client: Failed to create /config directory");
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     bool parseKeyValueLine(const String &line, String &key, String &value)
     {
@@ -24,6 +52,11 @@ namespace
 
     String readKeyValueFromFile(const char *path, const char *targetKey)
     {
+        if (!ensureFilesystemReady())
+        {
+            return "";
+        }
+
         File file = LittleFS.open(path, "r");
         if (!file || file.isDirectory())
         {
@@ -114,12 +147,19 @@ bool WifiManager::isEnabled() const
 void WifiManager::beginWiFi()
 {
     wifiState = WifiState::Starting;
+    lastApDiagnosticsLogMilliseconds = 0;
     stationRetryAttempt = 0;
     stationRetryAtMilliseconds = 0;
     stationConnectStartedMilliseconds = 0;
 
-    WiFi.mode(WIFI_AP_STA);
+    bool shouldUseSta = hasStationCredentialsConfigured();
+
+    WiFi.mode(WIFI_OFF);
+    delay(80);
+    WiFi.mode(shouldUseSta ? WIFI_AP_STA : WIFI_AP);
     WiFi.setSleep(false);
+    WiFi.setTxPower(WIFI_POWER_19_5dBm);
+    delay(20);
 
     uint64_t chipId = ESP.getEfuseMac();
     uint16_t suffix = static_cast<uint16_t>(chipId & 0xFFFF);
@@ -127,7 +167,25 @@ void WifiManager::beginWiFi()
     char apSsid[32];
     snprintf(apSsid, sizeof(apSsid), "%s-%04X", WIFI_AP_SSID_PREFIX, suffix);
 
-    bool apStarted = WiFi.softAP(apSsid, WIFI_AP_PASSWORD);
+    bool apStarted = false;
+
+#if WIFI_AP_OPEN_NETWORK
+    apStarted = WiFi.softAP(apSsid, nullptr, 1, false, 4);
+#else
+    size_t apPasswordLength = strlen(WIFI_AP_PASSWORD);
+    if (apPasswordLength == 0 || (apPasswordLength >= 8 && apPasswordLength <= 63))
+    {
+        apStarted = WiFi.softAP(apSsid, WIFI_AP_PASSWORD, 1, false, 4);
+    }
+    else
+    {
+        Serial.print("Client: Invalid AP password length (");
+        Serial.print(apPasswordLength);
+        Serial.println("), starting AP without password");
+        apStarted = WiFi.softAP(apSsid, nullptr, 1, false, 4);
+    }
+#endif
+
     if (!apStarted)
     {
         Serial.println("Client: Failed to start AP");
@@ -136,6 +194,10 @@ void WifiManager::beginWiFi()
     {
         Serial.print("Client: AP started, SSID=");
         Serial.print(apSsid);
+        Serial.print(" mode=");
+        Serial.print(shouldUseSta ? "AP+STA" : "AP");
+        Serial.print(" channel=");
+        Serial.print(WiFi.channel());
         Serial.print(" IP=");
         Serial.println(WiFi.softAPIP());
     }
@@ -217,6 +279,18 @@ void WifiManager::updateStateMachine(unsigned long nowMilliseconds)
         return;
 
     case WifiState::ApReadyStaIdle:
+        if ((nowMilliseconds - lastApDiagnosticsLogMilliseconds) >= 10000UL)
+        {
+            lastApDiagnosticsLogMilliseconds = nowMilliseconds;
+            Serial.print("Client: AP heartbeat mode=");
+            Serial.print(static_cast<int>(WiFi.getMode()));
+            Serial.print(" channel=");
+            Serial.print(WiFi.channel());
+            Serial.print(" stations=");
+            Serial.print(WiFi.softAPgetStationNum());
+            Serial.print(" IP=");
+            Serial.println(WiFi.softAPIP());
+        }
         return;
 
     case WifiState::StaConnecting:
@@ -348,6 +422,18 @@ const char *WifiManager::wifiStateText() const
     return "unknown";
 }
 
+bool WifiManager::hasStationCredentialsConfigured() const
+{
+    WifiCredentials credentials = loadWifiCredentials();
+
+    if (credentials.ssid.length() == 0)
+    {
+        credentials.ssid = WIFI_STA_SSID;
+    }
+
+    return credentials.ssid.length() > 0;
+}
+
 WifiManager::WifiCredentials WifiManager::loadWifiCredentials() const
 {
     WifiCredentials credentials;
@@ -358,6 +444,11 @@ WifiManager::WifiCredentials WifiManager::loadWifiCredentials() const
 
 bool WifiManager::saveWifiCredentials(const String &ssid, const String &password) const
 {
+    if (!ensureFilesystemReady())
+    {
+        return false;
+    }
+
     File file = LittleFS.open(WIFI_CONFIG_PATH, "w");
     if (!file || file.isDirectory())
     {
