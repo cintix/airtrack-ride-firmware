@@ -190,6 +190,60 @@ The project is intentionally designed to avoid heavy frameworks or unnecessary a
 
 ---
 
+# Git Workflow (Solo + PR)
+
+This repository uses a PR-first workflow, even for solo development.
+
+Rules:
+
+* `main` stays stable
+* no direct commits to `main`
+* all work happens in short-lived branches and merged via PR
+
+Branch naming:
+
+* `feat/<name>` for features
+* `fix/<name>` for bug fixes
+* `hotfix/<name>` for urgent production fixes
+* `chore/<name>` for maintenance
+
+Typical flow:
+
+```bash
+git checkout main
+git pull
+git checkout -b feat/<short-name>
+# work + commit(s)
+git push -u origin feat/<short-name>
+```
+
+Then open PR:
+
+* base: `main`
+* compare: `feat/<short-name>`
+
+After merge:
+
+```bash
+git checkout main
+git pull
+git branch -d feat/<short-name>
+```
+
+Recommended GitHub branch protection for `main`:
+
+* require pull request before merge
+* require at least 1 approval (can be self-review if solo)
+* require branch up to date before merge
+* include administrators
+* block force push and branch deletion
+
+Optional integration branch:
+
+* `develop` can be used for staging multiple PRs before `main`
+
+---
+
 # License
 
 MIT License
