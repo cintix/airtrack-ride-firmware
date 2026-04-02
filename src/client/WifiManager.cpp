@@ -8,6 +8,8 @@ namespace
 {
     constexpr const char *WIFI_CONFIG_PATH = "/config/wifi.txt";
     constexpr const char *CONFIG_DIRECTORY_PATH = "/config";
+    const IPAddress WIFI_AP_IP(WIFI_AP_IP_OCTET_1, WIFI_AP_IP_OCTET_2, WIFI_AP_IP_OCTET_3, WIFI_AP_IP_OCTET_4);
+    const IPAddress WIFI_AP_SUBNET(255, 255, 255, 0);
 
     bool ensureFilesystemReady()
     {
@@ -152,14 +154,9 @@ void WifiManager::beginWiFi()
     stationRetryAtMilliseconds = 0;
     stationConnectStartedMilliseconds = 0;
 
-    bool shouldUseSta = hasStationCredentialsConfigured();
+    WiFi.persistent(false);
 
-    WiFi.mode(WIFI_OFF);
-    delay(80);
-    WiFi.mode(shouldUseSta ? WIFI_AP_STA : WIFI_AP);
-    WiFi.setSleep(false);
-    WiFi.setTxPower(WIFI_POWER_19_5dBm);
-    delay(20);
+    bool shouldUseSta = hasStationCredentialsConfigured();
 
     uint64_t chipId = ESP.getEfuseMac();
     uint16_t suffix = static_cast<uint16_t>(chipId & 0xFFFF);
@@ -167,42 +164,50 @@ void WifiManager::beginWiFi()
     char apSsid[32];
     snprintf(apSsid, sizeof(apSsid), "%s-%04X", WIFI_AP_SSID_PREFIX, suffix);
 
-    bool apStarted = false;
-
-#if WIFI_AP_OPEN_NETWORK
-    apStarted = WiFi.softAP(apSsid, nullptr, 1, false, 4);
-#else
-    size_t apPasswordLength = strlen(WIFI_AP_PASSWORD);
-    if (apPasswordLength == 0 || (apPasswordLength >= 8 && apPasswordLength <= 63))
+    bool apStarted = startAccessPointWithReset(apSsid);
+    if (!apStarted)
     {
-        apStarted = WiFi.softAP(apSsid, WIFI_AP_PASSWORD, 1, false, 4);
+        Serial.println("Client: AP start failed (attempt 1), retrying...");
+        delay(WIFI_AP_RETRY_DELAY_MS);
+        apStarted = startAccessPointWithReset(apSsid);
     }
-    else
-    {
-        Serial.print("Client: Invalid AP password length (");
-        Serial.print(apPasswordLength);
-        Serial.println("), starting AP without password");
-        apStarted = WiFi.softAP(apSsid, nullptr, 1, false, 4);
-    }
-#endif
 
     if (!apStarted)
     {
-        Serial.println("Client: Failed to start AP");
-    }
-    else
-    {
-        Serial.print("Client: AP started, SSID=");
-        Serial.print(apSsid);
-        Serial.print(" mode=");
-        Serial.print(shouldUseSta ? "AP+STA" : "AP");
-        Serial.print(" channel=");
-        Serial.print(WiFi.channel());
-        Serial.print(" IP=");
-        Serial.println(WiFi.softAPIP());
+        Serial.println("Client: AP start failed after retry, disabling WiFi state");
+        wifiState = WifiState::Disabled;
+        return;
     }
 
-    tryConnectStation(true);
+    if (shouldUseSta)
+    {
+        if (!WiFi.mode(WIFI_AP_STA))
+        {
+            Serial.println("Client: Failed to switch radio mode to AP+STA");
+            wifiState = WifiState::ApReadyStaIdle;
+            return;
+        }
+
+        WiFi.setSleep(false);
+        delay(20);
+    }
+
+    Serial.print("Client: AP started, SSID=");
+    Serial.print(apSsid);
+    Serial.print(" mode=");
+    Serial.print(shouldUseSta ? "AP+STA" : "AP");
+    Serial.print(" channel=");
+    Serial.print(WiFi.channel());
+    Serial.print(" IP=");
+    Serial.println(WiFi.softAPIP());
+
+    if (shouldUseSta)
+    {
+        tryConnectStation(true);
+        return;
+    }
+
+    wifiState = WifiState::ApReadyStaIdle;
 }
 
 void WifiManager::stopWiFi()
@@ -219,6 +224,47 @@ void WifiManager::stopWiFi()
     WiFi.disconnect(true, false);
     WiFi.mode(WIFI_OFF);
     Serial.println("Client: WiFi radio turned off");
+}
+
+bool WifiManager::startAccessPoint(const char *apSsid)
+{
+#if WIFI_AP_OPEN_NETWORK
+    return WiFi.softAP(apSsid, nullptr, WIFI_AP_CHANNEL, false, WIFI_AP_MAX_CLIENTS);
+#else
+    const size_t apPasswordLength = strlen(WIFI_AP_PASSWORD);
+    if (apPasswordLength < 8 || apPasswordLength > 63)
+    {
+        Serial.print("Client: Invalid AP password length (");
+        Serial.print(apPasswordLength);
+        Serial.println("), AP start aborted");
+        return false;
+    }
+
+    return WiFi.softAP(apSsid, WIFI_AP_PASSWORD, WIFI_AP_CHANNEL, false, WIFI_AP_MAX_CLIENTS);
+#endif
+}
+
+bool WifiManager::startAccessPointWithReset(const char *apSsid)
+{
+    WiFi.mode(WIFI_MODE_AP);
+    WiFi.softAPdisconnect(true);
+    WiFi.disconnect(true, false);
+    delay(WIFI_AP_RESET_DELAY_MS);
+
+    if (!WiFi.mode(WIFI_MODE_AP))
+    {
+        Serial.println("Client: Failed to switch radio mode to AP");
+        return false;
+    }
+
+    WiFi.setSleep(false);
+
+    if (!WiFi.softAPConfig(WIFI_AP_IP, WIFI_AP_IP, WIFI_AP_SUBNET))
+    {
+        Serial.println("Client: AP IP config failed");
+    }
+
+    return startAccessPoint(apSsid);
 }
 
 void WifiManager::tryConnectStation(bool resetRetry)
@@ -279,6 +325,7 @@ void WifiManager::updateStateMachine(unsigned long nowMilliseconds)
         return;
 
     case WifiState::ApReadyStaIdle:
+    {
         if ((nowMilliseconds - lastApDiagnosticsLogMilliseconds) >= 10000UL)
         {
             lastApDiagnosticsLogMilliseconds = nowMilliseconds;
@@ -292,6 +339,7 @@ void WifiManager::updateStateMachine(unsigned long nowMilliseconds)
             Serial.println(WiFi.softAPIP());
         }
         return;
+    }
 
     case WifiState::StaConnecting:
         if (stationStatus == WL_CONNECTED)

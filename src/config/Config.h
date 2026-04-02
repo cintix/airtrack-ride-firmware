@@ -107,7 +107,15 @@
 
 #define WIFI_AP_SSID_PREFIX "AirTrack"
 #define WIFI_AP_PASSWORD "airtrack123"
-#define WIFI_AP_OPEN_NETWORK 1
+#define WIFI_AP_OPEN_NETWORK 0
+#define WIFI_AP_CHANNEL 6
+#define WIFI_AP_MAX_CLIENTS 4
+#define WIFI_AP_IP_OCTET_1 192
+#define WIFI_AP_IP_OCTET_2 168
+#define WIFI_AP_IP_OCTET_3 4
+#define WIFI_AP_IP_OCTET_4 1
+#define WIFI_AP_RESET_DELAY_MS 200UL
+#define WIFI_AP_RETRY_DELAY_MS 500UL
 
 // Keep empty to skip STA connect until credentials are configured via setup UI.
 #define WIFI_STA_SSID ""

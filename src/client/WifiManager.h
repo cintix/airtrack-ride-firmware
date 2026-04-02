@@ -59,6 +59,8 @@ private:
 
     void beginWiFi();
     void stopWiFi();
+    bool startAccessPoint(const char *apSsid);
+    bool startAccessPointWithReset(const char *apSsid);
     void tryConnectStation(bool resetRetry);
     void updateStateMachine(unsigned long nowMilliseconds);
     void scheduleNextStationRetry(unsigned long nowMilliseconds, const char *reason);
