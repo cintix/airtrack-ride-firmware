@@ -241,6 +241,7 @@ Recommended GitHub branch protection for `main`:
 Optional integration branch:
 
 * `develop` can be used for staging multiple PRs before `main`
+* release details and full setup guide: see `RELEASE.md`
 
 ---
 
