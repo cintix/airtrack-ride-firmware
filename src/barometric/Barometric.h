@@ -19,7 +19,7 @@ public:
 
     bool isAvailable() const;
     bool hasReading() const;
-    BarometricReading getReading() const;
+    BarometricReading getReading();
 
 private:
     bool available = false;

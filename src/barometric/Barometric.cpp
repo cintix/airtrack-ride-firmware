@@ -75,8 +75,9 @@ bool Barometric::hasReading() const
     return readingAvailable;
 }
 
-BarometricReading Barometric::getReading() const
+BarometricReading Barometric::getReading()
 {
+    readingAvailable = false;
     return latestReading;
 }
 
