@@ -40,6 +40,11 @@ bool Application::isTrackingEnabled() const
 
 ApplicationResult Application::update(const GpsFix &gpsFix)
 {
+    return update(gpsFix, 0.0f);
+}
+
+ApplicationResult Application::update(const GpsFix &gpsFix, float temperatureC)
+{
     ApplicationResult result = {};
     result.hasDisplayData = true;
     result.hasTrackPoint = false;
@@ -47,7 +52,7 @@ ApplicationResult Application::update(const GpsFix &gpsFix)
     result.displayData.speedKm = gpsFix.groundSpeedMetersPerSecond * 3.6f;
     result.displayData.timeSpentSeconds = stats.elapsedSeconds;
     result.displayData.distanceKm = stats.distanceMeters / 1000.0f;
-    result.displayData.temperatureC = 0.0f;
+    result.displayData.temperatureC = temperatureC;
     result.displayData.timeStartedSeconds = rideStartTimestampMilliseconds / 1000.0f;
     result.stats = stats;
 
@@ -159,7 +164,7 @@ ApplicationResult Application::update(const GpsFix &gpsFix)
     result.displayData.speedKm = gpsFix.groundSpeedMetersPerSecond * 3.6f;
     result.displayData.timeSpentSeconds = stats.elapsedSeconds;
     result.displayData.distanceKm = stats.distanceMeters / 1000.0f;
-    result.displayData.temperatureC = 0.0f;
+    result.displayData.temperatureC = temperatureC;
     result.displayData.timeStartedSeconds = rideStartTimestampMilliseconds / 1000.0f;
 
     return result;

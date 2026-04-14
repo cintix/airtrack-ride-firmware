@@ -9,6 +9,7 @@
 #include "screen/models/DisplayRecord.h"
 #include "input/Input.h"
 #include "config/Config.h"
+#include "barometric/Barometric.h"
 
 namespace
 {
@@ -198,6 +199,7 @@ Application application;
 Storage storage;
 ClientSync client;
 Input input;
+Barometric barometric;
 
 #if DISPLAY_DRIVER_TYPE == DISPLAY_DRIVER_EPAPER
 EPaperDisplay display;
@@ -218,6 +220,7 @@ void setup()
     Serial.println("AirTrack Ride firmware starting...");
 
     gps.begin();
+    barometric.begin();
 
     if (!storage.begin())
     {
@@ -251,11 +254,13 @@ void setup()
 void loop()
 {
     gps.update();
+    barometric.update();
     input.update();
 
     static uint32_t lastPrint = 0;
     static ApplicationResult lastApplicationResult = {};
     static DisplayRecord lastDisplayRecord = {};
+    static float lastAmbientTemperatureC = 0.0f;
 
     if (input.IsToggled())
     {
@@ -277,10 +282,17 @@ void loop()
         record = gps.getRecord();
         hasFix = record.valid;
 
+        if (barometric.hasReading())
+        {
+            lastAmbientTemperatureC = barometric.getReading().temperatureC;
+        }
+
         if (hasFix)
         {
             GpsFix gpsFix = toGpsFix(record);
-            ApplicationResult applicationResult = application.update(gpsFix);
+            float ambientTemperatureC = lastAmbientTemperatureC;
+
+            ApplicationResult applicationResult = application.update(gpsFix, ambientTemperatureC);
             lastApplicationResult = applicationResult;
             lastDisplayRecord = toDisplayRecord(applicationResult);
 

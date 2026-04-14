@@ -102,6 +102,17 @@
 #define SCREEN_TIME_DELTA_SECONDS 1.0f
 
 /*
+    Barometric sensor (BME280) configuration
+*/
+
+#define BAROMETRIC_ENABLED 1
+#define BAROMETRIC_I2C_SDA_PIN 8
+#define BAROMETRIC_I2C_SCL_PIN 9
+#define BAROMETRIC_I2C_ADDRESS 0x76
+#define BAROMETRIC_READ_INTERVAL_MS 1000
+#define BAROMETRIC_SEA_LEVEL_PRESSURE_HPA 1013.25f
+
+/*
     WiFi / Client configuration
 */
 

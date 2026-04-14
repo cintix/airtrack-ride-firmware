@@ -15,5 +15,7 @@ void EPaperDisplay::updateDisplay(const DisplayRecord &record)
     Serial.print(record.SpeedKm, 1);
     Serial.print(" km/t, distance=");
     Serial.print(record.distanceKm, 2);
-    Serial.println(" km");
+    Serial.print(" km, temp=");
+    Serial.print(record.tempatureC, 1);
+    Serial.println(" C");
 }

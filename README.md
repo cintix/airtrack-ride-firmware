@@ -11,6 +11,8 @@ The project focuses on:
 
 The firmware runs on an **ESP32-C3** and uses a **u-blox GPS module (e.g. NEO-6M)**.
 
+For coding-session bootstrap notes (tooling paths, module contracts, runtime flow), see `AGENT.md`.
+
 ---
 
 # Architecture Overview

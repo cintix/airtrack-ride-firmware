@@ -12,6 +12,7 @@ public:
     void setTrackingEnabled(bool enabled);
     bool isTrackingEnabled() const;
     ApplicationResult update(const GpsFix &gpsFix);
+    ApplicationResult update(const GpsFix &gpsFix, float temperatureC);
 
 private:
     UserProfile profile = {};
